@@ -22,10 +22,10 @@ DatasetLoader::DatasetLoader(const Config& io_config, const PredictFunction& pre
   label_idx_ = 0;
   weight_idx_ = NO_SPECIFIC;
   group_idx_ = NO_SPECIFIC;
-  // if (CheckCanLoadFromBin(filename) == "") {
+  if (CheckCanLoadFromBin(filename) == "") {
     // SetHeader should only be called when loading from text file
     SetHeader(filename);
-  // }
+  }
   store_raw_ = false;
   if (io_config.linear_tree) {
     store_raw_ = true;
@@ -1361,6 +1361,7 @@ void DatasetLoader::ExtractFeaturesFromFile(const char* filename, const Parser* 
 
 /*! \brief Check can load from binary file */
 std::string DatasetLoader::CheckCanLoadFromBin(const char* filename) {
+  Log::Info("CheckCanLoadFromBin starts");
   std::string bin_filename(filename);
   bin_filename.append(".bin");
 
@@ -1381,8 +1382,10 @@ std::string DatasetLoader::CheckCanLoadFromBin(const char* filename) {
   size_t read_cnt = reader->Read(buffer.data(), size_of_token);
   if (read_cnt == size_of_token
       && std::string(buffer.data()) == std::string(Dataset::binary_file_token)) {
+    Log::Info("CheckCanLoadFromBin ends");
     return bin_filename;
   } else {
+    Log::Info("CheckCanLoadFromBin starts");
     return std::string();
   }
 }

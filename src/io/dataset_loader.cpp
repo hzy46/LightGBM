@@ -22,7 +22,7 @@ DatasetLoader::DatasetLoader(const Config& io_config, const PredictFunction& pre
   label_idx_ = 0;
   weight_idx_ = NO_SPECIFIC;
   group_idx_ = NO_SPECIFIC;
-  if (CheckCanLoadFromBin(filename) == "") {
+  if (filename != nullptr && CheckCanLoadFromBin(filename) == "") {
     // SetHeader should only be called when loading from text file
     SetHeader(filename);
   }

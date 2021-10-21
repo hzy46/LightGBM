@@ -476,6 +476,11 @@ Dataset* DatasetLoader::LoadFromBinFile(const char* data_filename, const char* b
     mem_ptr += VirtualFileWriter::AlignedSize(sizeof(char) * str_len);
     dataset->feature_names_.emplace_back(str_buf.str());
   }
+  auto size = dataset->feature_names().size();
+  Log::Info("dataset feature name size is: %d", size);
+  if (size > 0) {
+    Log::Info("The first element in feature name is: %s", dataset->feature_names()[0].c_str());
+  }
   // get forced_bin_bounds_
   dataset->forced_bin_bounds_ = std::vector<std::vector<double>>(dataset->num_total_features_, std::vector<double>());
   for (int i = 0; i < dataset->num_total_features_; ++i) {

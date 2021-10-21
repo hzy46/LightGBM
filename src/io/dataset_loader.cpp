@@ -22,10 +22,10 @@ DatasetLoader::DatasetLoader(const Config& io_config, const PredictFunction& pre
   label_idx_ = 0;
   weight_idx_ = NO_SPECIFIC;
   group_idx_ = NO_SPECIFIC;
-  if (CheckCanLoadFromBin(filename) == "") {
+  // if (CheckCanLoadFromBin(filename) == "") {
     // SetHeader should only be called when loading from text file
     SetHeader(filename);
-  }
+  // }
   store_raw_ = false;
   if (io_config.linear_tree) {
     store_raw_ = true;
@@ -38,6 +38,7 @@ DatasetLoader::~DatasetLoader() {
 void DatasetLoader::SetHeader(const char* filename) {
   std::unordered_map<std::string, int> name2idx;
   std::string name_prefix("name:");
+  Log::Info("SetHeader")
   if (filename != nullptr) {
     TextReader<data_size_t> text_reader(filename, config_.header);
 

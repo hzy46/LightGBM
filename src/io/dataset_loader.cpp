@@ -38,7 +38,7 @@ DatasetLoader::~DatasetLoader() {
 void DatasetLoader::SetHeader(const char* filename) {
   std::unordered_map<std::string, int> name2idx;
   std::string name_prefix("name:");
-  Log::Info("SetHeader")
+  Log::Info("SetHeader");
   if (filename != nullptr) {
     TextReader<data_size_t> text_reader(filename, config_.header);
 

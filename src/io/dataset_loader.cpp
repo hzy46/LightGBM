@@ -79,6 +79,12 @@ void DatasetLoader::SetHeader(const char* filename) {
       }
     }
 
+    auto size = feature_names_.size();
+    Log::Info("[in SetHeader] dataset feature name size is: %d", size);
+    if (size > 0) {
+      Log::Info("[in SetHeader] The first element in feature name is: %s", feature_names_[0].c_str());
+    }
+
     // load ignore columns
     if (config_.ignore_column.size() > 0) {
       if (Common::StartsWith(config_.ignore_column, name_prefix)) {
@@ -477,9 +483,9 @@ Dataset* DatasetLoader::LoadFromBinFile(const char* data_filename, const char* b
     dataset->feature_names_.emplace_back(str_buf.str());
   }
   auto size = dataset->feature_names().size();
-  Log::Info("dataset feature name size is: %d", size);
+  Log::Info("[in LoadFromBinFile] dataset feature name size is: %d", size);
   if (size > 0) {
-    Log::Info("The first element in feature name is: %s", dataset->feature_names()[0].c_str());
+    Log::Info("[in LoadFromBinFile] The first element in feature name is: %s", dataset->feature_names()[0].c_str());
   }
   // get forced_bin_bounds_
   dataset->forced_bin_bounds_ = std::vector<std::vector<double>>(dataset->num_total_features_, std::vector<double>());

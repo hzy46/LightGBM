@@ -1902,6 +1902,7 @@ class Dataset:
         self : Dataset
             Returns self.
         """
+        print("In Python save_binary")
         _safe_call(_LIB.LGBM_DatasetSaveBinary(
             self.construct().handle,
             c_str(str(filename))))

@@ -1476,6 +1476,11 @@ int LGBM_DatasetSaveBinary(DatasetHandle handle,
                            const char* filename) {
   API_BEGIN();
   auto dataset = reinterpret_cast<Dataset*>(handle);
+  auto size = dataset->feature_names().size();
+  Log::Info("dataset feature name size is: %d", size);
+  if (size > 0) {
+    Log::Info("The first element in feature name is: %s", dataset->feature_names()[0].c_str());
+  }
   dataset->SaveBinaryFile(filename);
   API_END();
 }

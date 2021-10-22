@@ -17,6 +17,8 @@
 #include <stdexcept>
 #include <vector>
 
+const static int default_omp_num_threads = omp_get_num_threads();
+
 inline int OMP_NUM_THREADS() {
   int ret = 1;
 #pragma omp parallel

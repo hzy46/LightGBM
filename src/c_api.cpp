@@ -2144,7 +2144,11 @@ int LGBM_BoosterPredictForMat(BoosterHandle handle,
   config.Set(param);
   if (config.num_threads > 0) {
     omp_set_num_threads(config.num_threads);
+  } else {
+    omp_reset_num_threads();
   }
+  Log::Info("omp_get_max_threads result: %d", omp_get_max_threads());
+  Log::Info("OMP_NUM_THREADS result: %d", OMP_NUM_THREADS());
   Booster* ref_booster = reinterpret_cast<Booster*>(handle);
   auto get_row_fun = RowPairFunctionFromDenseMatric(data, nrow, ncol, data_type, is_row_major);
   ref_booster->Predict(start_iteration, num_iteration, predict_type, nrow, ncol, get_row_fun,

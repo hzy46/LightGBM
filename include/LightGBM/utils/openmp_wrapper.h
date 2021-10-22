@@ -29,7 +29,7 @@ inline int OMP_NUM_THREADS() {
 
 inline void omp_reset_num_threads() {
   Log::Info("Set Thread number to %d", default_omp_num_threads);
-  omp_set_num_threads(default_omp_num_threads)
+  omp_set_num_threads(default_omp_num_threads);
 }
 
 class ThreadExceptionHelper {

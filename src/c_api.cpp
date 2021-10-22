@@ -1571,8 +1571,8 @@ int LGBM_BoosterCreate(const DatasetHandle train_data,
                        const char* parameters,
                        BoosterHandle* out) {
   API_BEGIN();
-  Log::Info("omp_get_max_threads result: %d", omp_get_max_threads())
-  Log::Info("OMP_NUM_THREADS result: %d", OMP_NUM_THREADS())
+  Log::Info("omp_get_max_threads result: %d", omp_get_max_threads());
+  Log::Info("OMP_NUM_THREADS result: %d", OMP_NUM_THREADS());
   const Dataset* p_train_data = reinterpret_cast<const Dataset*>(train_data);
   auto ret = std::unique_ptr<Booster>(new Booster(p_train_data, parameters));
   *out = ret.release();

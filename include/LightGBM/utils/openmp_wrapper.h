@@ -17,8 +17,6 @@
 #include <stdexcept>
 #include <vector>
 
-const static int default_omp_num_threads = OMP_NUM_THREADS();
-
 inline int OMP_NUM_THREADS() {
   int ret = 1;
 #pragma omp parallel
@@ -27,8 +25,10 @@ inline int OMP_NUM_THREADS() {
   return ret;
 }
 
+const static int default_omp_num_threads = OMP_NUM_THREADS();
+
 inline void omp_reset_num_threads() {
-  Log::Info("Set Thread number to %d", default_omp_num_threads);
+  LightGBM::Log::Info("Set Thread number to %d", default_omp_num_threads);
   omp_set_num_threads(default_omp_num_threads);
 }
 

@@ -17,7 +17,7 @@
 #include <stdexcept>
 #include <vector>
 
-const static int default_omp_num_threads = omp_get_num_threads();
+const static int default_omp_num_threads = OMP_NUM_THREADS();
 
 inline int OMP_NUM_THREADS() {
   int ret = 1;
@@ -25,6 +25,11 @@ inline int OMP_NUM_THREADS() {
 #pragma omp master
   { ret = omp_get_num_threads(); }
   return ret;
+}
+
+inline void omp_reset_num_threads() {
+  Log::Info("Set Thread number to %d", default_omp_num_threads);
+  omp_set_num_threads(default_omp_num_threads)
 }
 
 class ThreadExceptionHelper {

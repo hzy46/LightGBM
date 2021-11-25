@@ -672,6 +672,8 @@ public:
     }
     finished_ = false;
     Log::Info("[CategoryEncodingBuilder constructor] pointer address of category_encoding_provider_ %p", category_encoding_provider_);
+    Log::Info("[CategoryEncodingBuilder constructor] nrow_ %d", int(nrow_));
+    Log::Info("[CategoryEncodingBuilder constructor] ncol_ %d", int(ncol_));
   }
 
   void AccumulateBatch(
@@ -684,6 +686,8 @@ public:
       return;
     }
     Log::Info("[AccumulateBatch] pointer address of category_encoding_provider_ %p", category_encoding_provider_);
+    Log::Info("[AccumulateBatch] nrow_ %d", int(nrow_));
+    Log::Info("[AccumulateBatch] ncol_ %d", int(ncol_));
     for (int32_t i = start_row; i < start_row + n_batch_row; ++i) {
       // Features are batch data and label is the full data. Thus the index is different.
       const std::vector<double>& oneline_features = get_row_fun(i - start_row);

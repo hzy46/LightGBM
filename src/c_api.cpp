@@ -989,6 +989,47 @@ int LGBM_DatasetCreateFromSampledColumn(double** sample_data,
   API_END();
 }
 
+int LGBM_CategoryEncodingBuilderCreate(
+  int32_t nrow,
+  int32_t ncol,
+  const char* parameters,
+  CategoryEncodingBuilderHandle* out) {
+  API_BEGIN();
+  auto param = Config::Str2Map(parameters);
+  Config config;
+  config.Set(param);
+  OMP_SET_NUM_THREADS(config.num_threads);
+  auto category_encoding_builder = new LightGBM::CategoryEncodingBuilder(&config, nrow, ncol);
+  *out = category_encoding_builder;
+  API_END();
+}
+
+int LGBM_CategoryEncodingBuilderAccumulateBatch(
+  CategoryEncodingBuilderHandle category_encoding_builder,
+  const void* data,
+  int data_type,
+  const void* label,
+  int32_t nrow,
+  int32_t ncol,
+  int32_t start_row
+) {
+  API_BEGIN();
+  auto get_row_fun = RowFunctionFromDenseMatric(data, nrow, ncol, data_type, 1);
+  auto get_label_fun = LabelFunctionFromArray(label);
+  auto p_category_encoding_builder = reinterpret_cast<LightGBM::CategoryEncodingBuilder*>(category_encoding_builder);
+  p_category_encoding_builder->AccumulateBatch(get_row_fun, get_label_fun, nrow, ncol, start_row);
+  API_END();
+}
+
+int LGBM_CategoryEncodingProviderFinishAccumulate(
+  CategoryEncodingBuilderHandle category_encoding_builder
+) {
+  API_BEGIN();
+  auto p_category_encoding_builder = reinterpret_cast<LightGBM::CategoryEncodingBuilder*>(category_encoding_builder);
+  p_category_encoding_builder->FinishAccumulate();
+  API_END();
+}
+
 
 int LGBM_DatasetCreateByReference(const DatasetHandle reference,
                                   int64_t num_total_row,
@@ -1109,6 +1150,8 @@ int LGBM_DatasetCreateFromMats(int32_t nmat,
     get_row_fun.push_back(RowFunctionFromDenseMatric(data[j], nrow[j], ncol, data_type, is_row_major));
   }
 
+  Log::Warning("Before create cep, config.categorical_feature is %s", config.categorical_feature.c_str());
+
   std::unique_ptr<const CategoryEncodingProvider> category_encoding_provider;
   const bool is_valid = (reference != nullptr);
   if (is_valid) {
@@ -1121,6 +1164,8 @@ int LGBM_DatasetCreateFromMats(int32_t nmat,
     category_encoding_provider.reset(CategoryEncodingProvider::CreateCategoryEncodingProvider(
       &config, get_row_fun, get_label_fun, nmat, nrow, ncol));
   }
+  Log::Warning("After create cep, config.categorical_feature is %s", config.categorical_feature.c_str());
+
   if (category_encoding_provider != nullptr) {
     category_encoding_provider->WrapRowFunctions(&get_row_fun, &ncol, is_valid);
   }

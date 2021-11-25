@@ -70,6 +70,7 @@ CategoryEncodingProvider::CategoryEncodingProvider(Config* config,
   num_original_features_ = ncol;
   ParseMetaInfo(nullptr, config);
   num_data_ = nrow;
+  Log::Info("CategoryEncodingProvider training_data_fold_id_ size: %d", int(num_data_));
   training_data_fold_id_.resize(num_data_);
   PrepareCategoryEncodingStatVectors();
   if (category_encoders_.size() == 0) { return; }
@@ -734,6 +735,20 @@ void CategoryEncodingProvider::ProcessOneLine(const std::vector<double>& one_lin
   ++thread_fold_num_data_[thread_id][fold_id];
 }
 
+void CategoryEncodingProvider::ProcessOneLine(const std::vector<double>& one_line, double label,
+  int /*line_idx*/, const int fold_id) {
+  for (int fid = 0; fid < num_original_features_; ++fid) {
+    if (is_categorical_feature_[fid]) {
+      const int value = static_cast<int>(one_line[fid]);
+      AddCountAndLabel(&count_info_[fid][fold_id], &label_info_[fid][fold_id],
+        value, 1, static_cast<label_t>(label));
+    }
+  }
+  fold_label_sum_[fold_id] += label;
+  ++fold_num_data_[fold_id];
+}
+
+
 void CategoryEncodingProvider::ProcessOneLine(const std::vector<std::pair<int, double>>& one_line, double label, int line_idx,
   std::vector<bool>* is_feature_processed_ptr, const int thread_id, const int fold_id) {
   ProcessOneLineInner<false>(one_line, label, line_idx, is_feature_processed_ptr, &thread_count_info_[thread_id],
@@ -1114,6 +1129,26 @@ void CategoryEncodingProvider::WrapColIters(
   *ncol_ptr = static_cast<int64_t>(col_iters->size()) + 1;
 }
 
+void CategoryEncodingProvider::InitFromConfig(Config* config_from_dataset, int32_t nrow, int32_t ncol) {
+  if (category_encoders_.size() == 0) { return; }
+  num_original_features_ = ncol;
+  ParseMetaInfo(nullptr, config_from_dataset);
+  PrepareCategoryEncodingStatVectors();
+  // initialize num_data_ and training_data_fold_id_
+  num_data_ = nrow;
+  training_data_fold_id_.resize(num_data_, 0);
+  // initialize tmp variables
+  tmp_mt_generator_ = std::mt19937(config_.seed);
+  tmp_fold_probs_.resize(config_.num_target_encoding_folds, 1.0f / config_.num_target_encoding_folds);
+  tmp_fold_distribution_ = std::discrete_distribution<int>(tmp_fold_probs_.begin(), tmp_fold_probs_.end());
+  // initialize fold_info
+  for (int32_t i = 0; i < nrow; ++i) {
+    training_data_fold_id_[i] = tmp_fold_distribution_(tmp_mt_generator_);
+  }
+  Log::Info("InitFromConfig training_data_fold_id_ size %d", int(training_data_fold_id_.size()));
+  Log::Info("InitFromConfig is_categorical_feature_ size %d", int(is_categorical_feature_.size()));
+}
+
 void CategoryEncodingProvider::InitFromParser(Config* config_from_loader, Parser* parser, const int num_machines,
   std::unordered_set<int>* categorical_features_from_loader) {
   if (category_encoders_.size() == 0) { return; }
@@ -1157,6 +1192,13 @@ void CategoryEncodingProvider::AccumulateOneLineStat(const char* buffer, const s
   training_data_fold_id_.emplace_back(fold_id);
   ++num_data_;
   ProcessOneLine(tmp_oneline_features_, label, row_idx, &tmp_is_feature_processed_, fold_id);
+}
+
+void CategoryEncodingProvider::AccumulateOneLineStat(const std::vector<double>& oneline_features, double label, const data_size_t row_idx) {
+  Log::Info("AccumulateOneLineStat training_data_fold_id_ size %d", int(training_data_fold_id_.size()));
+  Log::Info("AccumulateOneLineStat is_categorical_feature_ size %d", int(is_categorical_feature_.size()));
+  const int fold_id = training_data_fold_id_[row_idx];
+  ProcessOneLine(oneline_features, label, row_idx, fold_id);
 }
 
 void CategoryEncodingProvider::ExpandNumFeatureWhileAccumulate(const int new_largest_fid) {

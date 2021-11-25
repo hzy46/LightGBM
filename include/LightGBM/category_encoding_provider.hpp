@@ -20,6 +20,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <functional>
 
 namespace LightGBM {
 
@@ -358,6 +359,9 @@ class CategoryEncodingProvider {
   void ProcessOneLine(const std::vector<double>& one_line, double label,
     int line_idx, int thread_id, const int fold_id);
 
+  void ProcessOneLine(const std::vector<double>& one_line, double label,
+    int line_idx, const int fold_id);
+
   void ProcessOneLine(const std::vector<std::pair<int, double>>& one_line, double label,
     int line_idx, std::vector<bool>* is_feature_processed, int thread_id, const int fold_id);
 
@@ -516,10 +520,13 @@ class CategoryEncodingProvider {
 
   Parser* FinishProcess(const int num_machines, Config* config);
 
+  void InitFromConfig(Config* config, int32_t nrow, int32_t ncol);
+
   void InitFromParser(Config* config_from_loader, Parser* parser, const int num_machines,
     std::unordered_set<int>* categorical_features_from_loader);
 
   void AccumulateOneLineStat(const char* buffer, const size_t size, const data_size_t row_idx);
+  void AccumulateOneLineStat(const std::vector<double>& oneline_features, const double label, const data_size_t row_idx);
 
   /*!
   * \brief Checks that when forced splits contain categorical features, `raw` should be included in category_encoders
@@ -651,6 +658,64 @@ class CategoryEncodingProvider {
   // mark whether the category encoding statistics is accumulated from file
   bool accumulated_from_file_;
 };
+
+// helper class to build category encoding from batch data
+class CategoryEncodingBuilder {
+public:
+  CategoryEncodingBuilder(Config *config, int32_t nrow, int32_t ncol) {
+    config_ = *config;
+    nrow_ = nrow;
+    ncol_ = ncol;
+    auto category_encoding_provider_ = CategoryEncodingProvider::CreateCategoryEncodingProvider(&config_);
+    if (category_encoding_provider_ != nullptr) {
+      category_encoding_provider_->InitFromConfig(&config_, nrow_, ncol_);
+    }
+    finished_ = false;
+    Log::Info("[CategoryEncodingBuilder constructor] pointer address of category_encoding_provider_ %p", category_encoding_provider_);
+  }
+
+  void AccumulateBatch(
+    std::function<std::vector<double>(int row_idx)> &get_row_fun,
+    std::function<label_t(int row_idx)>& get_label_fun,
+    int32_t n_batch_row,
+    int32_t n_batch_col,
+    int32_t start_row) {
+    if (this->category_encoding_provider_ == nullptr) {
+      return;
+    }
+    Log::Info("[AccumulateBatch] pointer address of category_encoding_provider_ %p", category_encoding_provider_);
+    for (int32_t i = start_row; i < start_row + n_batch_row; ++i) {
+      // Features are batch data and label is the full data. Thus the index is different.
+      const std::vector<double>& oneline_features = get_row_fun(i - start_row);
+      const double label = static_cast<double>(get_label_fun(i));
+      this->category_encoding_provider_->AccumulateOneLineStat(oneline_features, label, i);
+    }
+  }
+
+  void FinishAccumulate() {
+    if (this->category_encoding_provider_ == nullptr) {
+      return;
+    }
+    this->category_encoding_provider_->FinishProcess(1, &config_);
+    Log::Warning("FinishAccumulate %s", this->category_encoding_provider_->DumpToString());
+  }
+
+  virtual ~CategoryEncodingBuilder() {
+    if (category_encoding_provider_ != nullptr) {
+      delete category_encoding_provider_;
+    }
+  }
+
+private:
+  // We have to save the config_, because sometimes it is changed by category encoding provider.
+  Config config_;
+  // If category_encoding_provider_ is null, no category encoding is involved.
+  CategoryEncodingProvider *category_encoding_provider_;
+  int32_t nrow_;
+  int32_t ncol_;
+  bool finished_;
+};
+
 
 class CategoryEncodingParser : public Parser {
  public:

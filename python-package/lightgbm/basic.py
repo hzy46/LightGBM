@@ -1451,6 +1451,24 @@ class Dataset:
         self._start_row += nrow
         return self
 
+    def _accumulate_batch(self, data, label) -> 'Dataset':
+        nrow, ncol = data.shape
+        data = data.reshape(data.size)
+        data_ptr, data_type, _ = c_float_array(data)
+        label_ptr, _ = c_float_label(label)
+
+        _safe_call(_LIB.LGBM_CategoryEncodingBuilderAccumulateBatch(
+            self.category_encoding_builder,
+            data_ptr,
+            data_type,
+            label_ptr,
+            ctypes.c_int32(nrow),
+            ctypes.c_int32(ncol),
+            ctypes.c_int32(self._start_row),
+        ))
+        self._start_row += nrow
+        return self
+
     def get_params(self):
         """Get the used parameters in the Dataset.
 
@@ -1619,11 +1637,11 @@ class Dataset:
             if all(isinstance(x, np.ndarray) for x in data):
                 self.__init_from_list_np2d(data, label, params_str, ref_dataset)
             elif all(isinstance(x, Sequence) for x in data):
-                self.__init_from_seqs(data, ref_dataset)
+                self.__init_from_seqs(data, label, ref_dataset)
             else:
                 raise TypeError('Data list can only be of ndarray or Sequence')
         elif isinstance(data, Sequence):
-            self.__init_from_seqs([data], ref_dataset)
+            self.__init_from_seqs([data], label, ref_dataset)
         elif isinstance(data, dt_DataTable):
             self.__init_from_np2d(data.to_numpy(), label, params_str, ref_dataset)
         else:
@@ -1694,7 +1712,7 @@ class Dataset:
 
         return filtered, filtered_idx
 
-    def __init_from_seqs(self, seqs: List[Sequence], ref_dataset: Optional['Dataset'] = None):
+    def __init_from_seqs(self, seqs: List[Sequence], label, ref_dataset: Optional['Dataset'] = None):
         """
         Initialize data from list of Sequence objects.
 
@@ -1710,16 +1728,41 @@ class Dataset:
             self._init_from_ref_dataset(total_nrow, ref_dataset)
         else:
             param_str = param_dict_to_str(self.get_params())
+
             sample_cnt = _get_sample_count(total_nrow, param_str)
 
             sample_data, col_indices = self.__sample(seqs, total_nrow)
+
+            # create category_encoding_builder
+            self.category_encoding_builder = ctypes.c_void_p()
+
+            _safe_call(_LIB.LGBM_CategoryEncodingBuilderCreate(
+                ctypes.c_int32(total_nrow),
+                ctypes.c_int32(len(col_indices)),
+                c_str(param_str),
+                ctypes.byref(self.category_encoding_builder)))
+
+            self._start_row = 0
+            for seq in seqs:
+                nrow = len(seq)
+                batch_size = getattr(seq, 'batch_size', None) or Sequence.batch_size
+                for start in range(0, nrow, batch_size):
+                    end = min(start + batch_size, nrow)
+                    self._accumulate_batch(seq[start:end], label)
+            _safe_call(_LIB.LGBM_CategoryEncodingProviderFinishAccumulate(self.category_encoding_builder))
+
+            # reset param_dict? 也许之后 set 也行 (categorical feature may be cleared)
+
+            # TBD add cep
             self._init_from_sample(sample_data, col_indices, sample_cnt, total_nrow)
 
+        self._start_row = 0
         for seq in seqs:
             nrow = len(seq)
             batch_size = getattr(seq, 'batch_size', None) or Sequence.batch_size
             for start in range(0, nrow, batch_size):
                 end = min(start + batch_size, nrow)
+                # TBD add cep
                 self._push_rows(seq[start:end])
         return self
 

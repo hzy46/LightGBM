@@ -30,6 +30,7 @@
 typedef void* DatasetHandle;  /*!< \brief Handle of dataset. */
 typedef void* BoosterHandle;  /*!< \brief Handle of booster. */
 typedef void* FastConfigHandle; /*!< \brief Handle of FastConfig. */
+typedef void* CategoryEncodingBuilderHandle; /*!< \brief Handle of CategoryEncodingBuilder. */
 
 #define C_API_DTYPE_FLOAT32 (0)  /*!< \brief float32 (single precision float). */
 #define C_API_DTYPE_FLOAT64 (1)  /*!< \brief float64 (double precision float). */
@@ -121,6 +122,27 @@ LIGHTGBM_C_EXPORT int LGBM_DatasetCreateFromSampledColumn(double** sample_data,
                                                           int32_t num_total_row,
                                                           const char* parameters,
                                                           DatasetHandle* out);
+
+
+LIGHTGBM_C_EXPORT int LGBM_CategoryEncodingBuilderCreate(int32_t nrow,
+  int32_t ncol,
+  const char* parameters,
+  CategoryEncodingBuilderHandle* out);
+
+LIGHTGBM_C_EXPORT int LGBM_CategoryEncodingBuilderAccumulateBatch(
+  CategoryEncodingBuilderHandle category_encoding_builder,
+  const void* data,
+  int data_type,
+  const void* label,
+  int32_t nrow,
+  int32_t ncol,
+  int32_t start_row
+  );
+
+
+LIGHTGBM_C_EXPORT int LGBM_CategoryEncodingProviderFinishAccumulate(
+  CategoryEncodingBuilderHandle category_encoding_builder
+);
 
 /*!
  * \brief Allocate the space for dataset and bucket feature bins according to reference dataset.
